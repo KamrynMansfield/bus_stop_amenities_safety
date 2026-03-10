@@ -13,3 +13,5 @@
 .DS_Store
 
 **/*.quarto_ipynb
+
+1_data/HSIS Charlotte Data/combined_data/
