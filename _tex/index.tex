@@ -188,9 +188,9 @@
 \IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
 \urlstyle{same}
 \hypersetup{
-  pdftitle={La Palma Earthquakes},
-  pdfauthor={Steve Purves; Rowan Cockett},
-  pdfkeywords={La Palma, Earthquakes},
+  pdftitle={My Research Project},
+  pdfauthor={Kamryn Mansfield; Second Author},
+  pdfkeywords={Awesome, Research},
   colorlinks=true,
   linkcolor={blue},
   filecolor={Maroon},
@@ -199,38 +199,86 @@
   pdfcreator={LaTeX via pandoc}}
 
 
-\journalname{Earth and Space Science}
+\journalname{Transportation Engineering}
 
 \draftfalse
 
 \begin{document}
-\title{La Palma Earthquakes}
+\title{My Research Project}
 
-\authors{Steve Purves\affil{1}, Rowan Cockett\affil{1}}
-\affiliation{1}{Curvenote, }
-\correspondingauthor{Steve Purves}{steve@curvenote.com}
+\authors{Kamryn Mansfield\affil{1}, Second Author\affil{2,3}}
+\affiliation{1}{University of
+Tennessee, }\affiliation{2}{University, }\affiliation{3}{Something
+else, }
+\correspondingauthor{Kamryn Mansfield}{steve@curvenote.com}
 
 
 \begin{abstract}
-In September 2021, a significant jump in seismic activity on the island
-of La Palma (Canary Islands, Spain) signaled the start of a volcanic
-crisis that still continues at the time of writing. Earthquake data is
-continually collected and published by the Instituto Geográphico
-Nacional (IGN). \ldots{}
+Here is the abstract
 \end{abstract}
 
 \section*{Plain Language Summary}
-Earthquake data for the island of La Palma from the September 2021
-eruption is found \ldots{}
+Here is the plain language summary.
 
 
 
 
-\section{Introduction}\label{introduction}
+\section{Introduction}\label{sec-intro}
+
+\section{Literature Review}\label{sec-lit-review}
+
+\section{Data Section}\label{sec-data}
+
+\section{Methodology}\label{sec-methods}
+
+\section{Results}\label{sec-results}
+
+\section{Implications}\label{sec-implications}
+
+\section{Conclusion}\label{sec-conclusion}
+
+\section*{References}\label{references}
+\addcontentsline{toc}{section}{References}
+
+\protect\phantomsection\label{refs}
+\begin{CSLReferences}{1}{0}
+\vspace{1em}
+
+\bibitem[\citeproctext]{ref-marrero2019}
+Marrero, J., García, A., Berrocoso, M., Llinares, Á., Rodríguez-Losada,
+A., \& Ortiz, R. (2019). Strategies for the development of volcanic
+hazard maps in monogenetic volcanic fields: The example of {La} {Palma}
+({Canary} {Islands}). \emph{Journal of Applied Volcanology}, \emph{8}.
+\url{https://doi.org/10.1186/s13617-019-0085-5}
+
+\end{CSLReferences}
+
+\section{Quarto Examples}\label{sec-examples}
 
 \textsubscript{Source:
 \href{https://KamrynMansfield.github.io/bus_stop_amenities_safety/index.qmd.html}{Article
 Notebook}}
+
+\textsubscript{Source:
+\href{https://KamrynMansfield.github.io/bus_stop_amenities_safety/index.qmd.html}{Article
+Notebook}}
+
+\subsection{In-line code}\label{in-line-code}
+
+Based on data up to and including 1971, eruptions on La Palma happen
+every 79.8 years on average.
+
+\subsection{Using citations}\label{using-citations}
+
+Studies of the magma systems feeding the volcano, such as Marrero et al.
+(2019), have proposed that there are two main magma reservoirs feeding
+the Cumbre Vieja volcano; one in the mantle (30-40km depth) which
+charges and in turn feeds a shallower crustal reservoir (10-20km depth).
+
+\subsection{Figure References}\label{figure-references}
+
+Eight eruptions have been recorded since the late 1400s
+(Figure~\ref{fig-timeline}).
 
 \protect\phantomsection\label{cell-fig-timeline}
 \begin{figure}[H]
@@ -249,22 +297,11 @@ Notebook}}
 \href{https://KamrynMansfield.github.io/bus_stop_amenities_safety/index.qmd.html}{Article
 Notebook}}
 
-\textsubscript{Source:
-\href{https://KamrynMansfield.github.io/bus_stop_amenities_safety/index.qmd.html}{Article
-Notebook}}
+\subsection{Section References}\label{section-references}
 
-Based on data up to and including 1971, eruptions on La Palma happen
-every 79.8 years on average.
+Data are discussed in Section~\ref{sec-data}.
 
-Studies of the magma systems feeding the volcano, such as Marrero et al.
-(2019), have proposed that there are two main magma reservoirs feeding
-the Cumbre Vieja volcano; one in the mantle (30-40km depth) which
-charges and in turn feeds a shallower crustal reservoir (10-20km depth).
-
-Eight eruptions have been recorded since the late 1400s
-(Figure~\ref{fig-timeline}).
-
-Data and methods are discussed in Section~\ref{sec-data-methods}.
+\subsection{LATEX Math}\label{latex-math}
 
 Let \(x\) denote the number of eruptions in a year. Then, \(x\) can be
 modeled by a Poisson distribution
@@ -276,6 +313,8 @@ p(x) = \frac{e^{-\lambda} \lambda^{x}}{x !}
 where \(\lambda\) is the rate of eruptions per year. Using
 Equation~\ref{eq-poisson}, the probability of an eruption in the next
 \(t\) years can be calculated.
+
+\subsection{Markdown Table}\label{markdown-table}
 
 \begin{longtable}[]{@{}ll@{}}
 \caption{Recent historic eruptions on La
@@ -303,11 +342,13 @@ Montaña Quemada & 1492 \\
 Table~\ref{tbl-history} summarises the eruptions recorded since the
 colonization of the islands by Europeans in the late 1400s.
 
+\subsection{Inserting Images}\label{inserting-images}
+
 \begin{figure}
 
 \centering{
 
-\pandocbounded{\includegraphics[keepaspectratio]{images/la-palma-map.png}}
+\pandocbounded{\includegraphics[keepaspectratio]{1_images/la-palma-map.png}}
 
 }
 
@@ -315,8 +356,13 @@ colonization of the islands by Europeans in the late 1400s.
 
 \end{figure}%
 
+\subsection{Referencing Figures}\label{referencing-figures}
+
 La Palma is one of the west most islands in the Volcanic Archipelago of
 the Canary Islands (Figure~\ref{fig-map}).
+
+\subsection{Using figure from embeded
+notbook}\label{using-figure-from-embeded-notbook}
 
 \begin{figure}[H]
 
@@ -337,26 +383,6 @@ Earthquakes}}
 
 Figure~\ref{fig-spatial-plot} shows the location of recent Earthquakes
 on La Palma.
-
-\section{Data \& Methods}\label{sec-data-methods}
-
-\section{Conclusion}\label{conclusion}
-
-\section*{References}\label{references}
-\addcontentsline{toc}{section}{References}
-
-\protect\phantomsection\label{refs}
-\begin{CSLReferences}{1}{0}
-\vspace{1em}
-
-\bibitem[\citeproctext]{ref-marrero2019}
-Marrero, J., García, A., Berrocoso, M., Llinares, Á., Rodríguez-Losada,
-A., \& Ortiz, R. (2019). Strategies for the development of volcanic
-hazard maps in monogenetic volcanic fields: The example of {La} {Palma}
-({Canary} {Islands}). \emph{Journal of Applied Volcanology}, \emph{8}.
-\url{https://doi.org/10.1186/s13617-019-0085-5}
-
-\end{CSLReferences}
 
 
 

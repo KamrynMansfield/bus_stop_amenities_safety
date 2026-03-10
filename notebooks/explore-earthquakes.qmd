@@ -11,7 +11,7 @@ library(tidyverse)
 Read a clean version of data:
 
 ```{r}
-la_palma <- read_csv("la-palma.csv")
+la_palma <- read_csv("../1_data/la-palma.csv")
 ```
 
 Create spatial plot:
