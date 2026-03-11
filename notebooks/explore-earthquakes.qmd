@@ -1,6 +1,7 @@
 ---
 title: Explore Earthquakes
 author: Charlotte Wickham
+
 ---
 
 ```{r}

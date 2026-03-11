@@ -1,0 +1,159 @@
+---
+title: Data Exploration
+author: Kamryn Mansfield
+
+---
+
+```{r}
+#| output: false
+
+library(tidyverse)
+library(sf)
+library(ggspatial)
+source("../R/functions.R")
+```
+
+
+Combine HSIS Data:
+
+I made a function to combine the data, but they are too big for github. So I put folder they are saved to in the gitignore.
+
+```{r}
+#### COMBINE HSIS DATA ####
+# run this once to combined the files
+
+# The folder with the hsis data you want to combine
+# hsis_folder <- "../1_data/HSIS Charlotte Data/"
+#
+# This functions combines the appropriate hsis files if you have multiple years
+# combine_HSIS_files(hsis_folder)
+```
+
+
+```{r}
+#### PULL IN AND CLEAN DATA ####
+combined_hsis_folder <- "../1_data/HSIS Charlotte Data/combined_data/"
+
+busstop_data <- read_csv(paste0(combined_hsis_folder, "/","combined_18_to_24_catsStops.csv"))
+busstop_data <- busstop_data[,2:ncol(busstop_data)]
+crash_data <- read_csv(paste0(combined_hsis_folder, "/","combined_18_to_24_crash.csv"))
+crash_data <- crash_data[,2:ncol(crash_data)]
+```
+
+Making a data frame that will give true for each column that had no changes throughout the year
+```{r}
+
+stop_changes <- busstop_data |>
+  group_by(StopID) |>
+  summarise(x_unq = length(unique(x)) == 1,
+            y_unq = length(unique(y)) == 1,
+            Bench_unq = length(unique(Bench)) == 1,
+            Shelter_unq = length(unique(Shelter)) == 1,
+            routes_unq = length(unique(routes)) == 1,
+            Direction_unq = length(unique(Direction)) == 1,
+            Pole_Locat_unq = length(unique(Pole_Locat)) == 1,
+            Sidewalk_unq = length(unique(Sidewalk)) == 1,
+            Trans_P_unq = length(unique(Trans_P)) == 1,
+            orgnl_file = length(unique(orgnl_file)) == 1)
+```
+
+it looks like there have been some changes throughout the year
+```{r}
+
+colSums(stop_changes)
+
+```
+
+looking at the unique stop ids
+```{r}
+stop_id_count <- busstop_data |>
+  group_by(StopID) |>
+  summarise(count = n(),
+            file = paste(unique(orgnl_file), collapse = ", "))
+
+stop_id_count |>
+  filter(count == 2) |>
+  select(file) |>
+  unique()
+
+busstop_data |>
+  filter(orgnl_file == "clt24catsStops.csv") |>
+  arrange(StopID)
+
+```
+
+When I plot lon lat points as is, they don't line up.
+```{r}
+
+busstop_data |>
+  arrange(StopID) |>
+  ggplot() +
+  geom_point(aes(x = x, y = y, color = orgnl_file))
+
+
+```
+
+I noticed that some files have an extra digit at the end, so I selected all the files with common lat lon formats and made two plots. 
+```{r}
+busstop_data |>
+  filter(orgnl_file %in% c("clt18catsStops.csv",
+                           "clt19catsStops.csv",
+                           "clt20catsStops.csv",
+                           "clt22catsStops.csv")) |>
+  ggplot() +
+  geom_point(aes(x = x, y = y, color = orgnl_file))
+
+busstop_data |>
+  filter(orgnl_file %in% c("clt23catsStops.csv",
+                           "clt24catsStops.csv",
+                           "clt21catsStops.csv")) |>
+  ggplot() +
+  geom_point(aes(x = x, y = y, color = orgnl_file))
+```
+
+testing to see if I can get all stops on the same map
+
+small: These datasets have 5 or 6 digits in the coordinates
+```{r}
+small_coords_stops <- busstop_data |>
+  filter(orgnl_file %in% c("clt18catsStops.csv",
+                           "clt19catsStops.csv",
+                           "clt20catsStops.csv",
+                           "clt22catsStops.csv")) |>
+  mutate(x = x*10, y = y*10)
+
+```
+
+big: These datasets have 6 or 7 digits in the coordinates
+```{r}
+big_coords_stops <- busstop_data |>
+  filter(orgnl_file %in% c("clt23catsStops.csv",
+                           "clt24catsStops.csv",
+                           "clt21catsStops.csv"))
+```
+
+this df has combined the data after adjusting the coordinates
+```{r}
+bound_stops <- bind_rows(small_coords_stops, big_coords_stops) |>
+  mutate(lon = x / 10000,
+         lat = y / 10000)
+
+```
+
+Now I just need to find out how to get the coordinates as an sf object to plot on the map correctly.
+I am not done with this code chunk yet. I think I am doing something wrong with the crs.
+```{r}
+df_sf <- st_as_sf(bound_stops, coords = c("lat", "lon"), crs = 4326)
+
+# 1. Turn coordinates into sf object (assuming CRS 32610 - UTM Zone 10N)
+df_sf <- st_as_sf(bound_stops, coords = c("x", "y"), crs = 26917)
+# 2. Transform to Lat/Long (WGS84, EPSG:4326)
+df_longlat <- st_transform(df_sf, crs = 4326)
+
+ggplot(df_sf) +
+  annotation_map_tile() +
+  geom_sf(aes(color = orgnl_file))
+
+
+```
+
