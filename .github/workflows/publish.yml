@@ -16,7 +16,7 @@ jobs:
         
       - name: Install dependencies
         run: |
-          install.packages(c("rmarkdown", "knitr", "tidyverse")) # Add your dependencies here
+          install.packages(c("rmarkdown", "knitr", "tidyverse", "gt","sf")) # Add your dependencies here
         shell: Rscript {0}
 
       - name: Check out repository
