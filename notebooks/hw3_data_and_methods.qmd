@@ -1,0 +1,16 @@
+---
+title: "HW3: Data and Methodology"
+author: Kamryn Mansfield
+---
+
+## 1. Dependent Variable Selection (10)
+
+## 2. Independent Variable Selection (10)
+
+## 3. Descriptive Statistics (40)
+
+## 4. Data visualization (10)
+
+## 5. Conceptual Framework / Hypotheses (10)
+
+## 6. Write-up and Interpretation (20)

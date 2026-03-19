@@ -3,16 +3,14 @@ title: Data Exploration
 author: Kamryn Mansfield
 
 ---
-
+### Load Libraries
 ```{r}
-#| output: false
-
 library(tidyverse)
 library(sf)
 library(ggspatial)
+library(gt)
 source("../R/functions.R")
 ```
-
 
 Combine HSIS Data:
 
@@ -29,31 +27,41 @@ I made a function to combine the data, but they are too big for github. So I put
 # combine_HSIS_files(hsis_folder)
 ```
 
+### Pull in and clean data
 
 ```{r}
-#### PULL IN AND CLEAN DATA ####
 combined_hsis_folder <- "../1_data/HSIS Charlotte Data/combined_data/"
 
 busstop_data <- read_csv(paste0(combined_hsis_folder, "/","combined_18_to_24_catsStops.csv"))
 busstop_data <- busstop_data[,2:ncol(busstop_data)]
+
 crash_data <- read_csv(paste0(combined_hsis_folder, "/","combined_18_to_24_crash.csv"))
 crash_data <- crash_data[,2:ncol(crash_data)]
+
+person_data <- read_csv(paste0(combined_hsis_folder, "/","combined_18_to_24_per.csv"))
+person_data <- person_data[,2:ncol(person_data)]
+
+unit_data <- read_csv(paste0(combined_hsis_folder, "/","combined_18_to_24_unit.csv"))
+unit_data <- unit_data[,2:ncol(unit_data)]
+
 ```
+
+## Getting Bus Stop Data organized
 
 Making a data frame that will give true for each column that had no changes throughout the year
 ```{r}
 
 stop_changes <- busstop_data |>
-  group_by(StopID) |>
-  summarise(x_unq = length(unique(x)) == 1,
-            y_unq = length(unique(y)) == 1,
-            Bench_unq = length(unique(Bench)) == 1,
-            Shelter_unq = length(unique(Shelter)) == 1,
-            routes_unq = length(unique(routes)) == 1,
-            Direction_unq = length(unique(Direction)) == 1,
-            Pole_Locat_unq = length(unique(Pole_Locat)) == 1,
-            Sidewalk_unq = length(unique(Sidewalk)) == 1,
-            Trans_P_unq = length(unique(Trans_P)) == 1,
+  group_by(STOPID) |>
+  summarise(x_unq = length(unique(X)) == 1,
+            y_unq = length(unique(Y)) == 1,
+            Bench_unq = length(unique(BENCH)) == 1,
+            Shelter_unq = length(unique(SHELTER)) == 1,
+            routes_unq = length(unique(ROUTES)) == 1,
+            Direction_unq = length(unique(DIRECTION)) == 1,
+            Pole_Locat_unq = length(unique(POLE_LOCAT)) == 1,
+            Sidewalk_unq = length(unique(SIDEWALK)) == 1,
+            Trans_P_unq = length(unique(TRANS_P)) == 1,
             orgnl_file = length(unique(orgnl_file)) == 1)
 ```
 
@@ -67,7 +75,7 @@ colSums(stop_changes)
 looking at the unique stop ids
 ```{r}
 stop_id_count <- busstop_data |>
-  group_by(StopID) |>
+  group_by(STOPID) |>
   summarise(count = n(),
             file = paste(unique(orgnl_file), collapse = ", "))
 
@@ -78,7 +86,7 @@ stop_id_count |>
 
 busstop_data |>
   filter(orgnl_file == "clt24catsStops.csv") |>
-  arrange(StopID)
+  arrange(STOPID)
 
 ```
 
@@ -86,9 +94,9 @@ When I plot lon lat points as is, they don't line up.
 ```{r}
 
 busstop_data |>
-  arrange(StopID) |>
+  arrange(STOPID) |>
   ggplot() +
-  geom_point(aes(x = x, y = y, color = orgnl_file))
+  geom_point(aes(x = X, y = Y, color = orgnl_file))
 
 
 ```
@@ -101,14 +109,14 @@ busstop_data |>
                            "clt20catsStops.csv",
                            "clt22catsStops.csv")) |>
   ggplot() +
-  geom_point(aes(x = x, y = y, color = orgnl_file))
+  geom_point(aes(x = X, y = Y, color = orgnl_file))
 
 busstop_data |>
   filter(orgnl_file %in% c("clt23catsStops.csv",
                            "clt24catsStops.csv",
                            "clt21catsStops.csv")) |>
   ggplot() +
-  geom_point(aes(x = x, y = y, color = orgnl_file))
+  geom_point(aes(x = X, y = Y, color = orgnl_file))
 ```
 
 testing to see if I can get all stops on the same map
@@ -120,7 +128,7 @@ small_coords_stops <- busstop_data |>
                            "clt19catsStops.csv",
                            "clt20catsStops.csv",
                            "clt22catsStops.csv")) |>
-  mutate(x = x*10, y = y*10)
+  mutate(X = X*10, Y = Y*10)
 
 ```
 
@@ -134,26 +142,204 @@ big_coords_stops <- busstop_data |>
 
 this df has combined the data after adjusting the coordinates
 ```{r}
-bound_stops <- bind_rows(small_coords_stops, big_coords_stops) |>
-  mutate(lon = x / 10000,
-         lat = y / 10000)
+uniform_coords_df <- bind_rows(small_coords_stops, big_coords_stops)
+
+ggplot(uniform_coords_df) +
+  geom_point(aes(x = X, y = Y))
 
 ```
 
-Now I just need to find out how to get the coordinates as an sf object to plot on the map correctly.
-I am not done with this code chunk yet. I think I am doing something wrong with the crs.
+While the documentation just identifies x and y as latitude and longitude, an AI search helped me find that they are specifically from the North Carolina State Plane Coordinate System, EPSG:2264
 ```{r}
-df_sf <- st_as_sf(bound_stops, coords = c("lat", "lon"), crs = 4326)
-
-# 1. Turn coordinates into sf object (assuming CRS 32610 - UTM Zone 10N)
-df_sf <- st_as_sf(bound_stops, coords = c("x", "y"), crs = 26917)
+# 1. Turn coordinates into sf object (North Carolina State Plane Coordinate System, EPSG:2264)
+busstops_sf <- st_as_sf(uniform_coords_df, coords = c("X", "Y"), crs = 2264)
 # 2. Transform to Lat/Long (WGS84, EPSG:4326)
-df_longlat <- st_transform(df_sf, crs = 4326)
+df_longlat <- st_transform(busstops_sf, 4326)
 
-ggplot(df_sf) +
+ggplot(busstops_sf) +
   annotation_map_tile() +
   geom_sf(aes(color = orgnl_file))
 
 
 ```
+
+
+I notice some bus stops are not in all years. 
+
+I want to see how close the coordinates match up from year to year. I will group by stopid, find range of different x and y values and filter to just the ones that are off by over 10 ft. 
+
+```{r}
+combined_stops <- uniform_coords_df |>
+  group_by(STOPID) |>
+  summarise(x_avg = mean(X),
+            y_avg = mean(Y),
+            x_rng = max(X) - min(X),
+            y_rng = max(Y) - min(Y),
+            Xs = paste(X, collapse = ", "),
+            Ys = paste(Y, collapse = ", "),
+            hypot = sqrt(x_rng**2 + y_rng**2))
+
+moved_stops <- combined_stops |>
+  filter(hypot > 10)
+
+ggplot(moved_stops) +
+  geom_histogram(aes(x = hypot))
+
+ggplot(df_sf[df_sf$STOPID %in% moved_stops$STOPID,]) +
+  annotation_map_tile() +
+  geom_sf(aes(color = orgnl_file))
+
+```
+
+There are `r nrow(moved_stops)` stops that have some points more than 10 ft off from other points. This might indicate the stop was moved. The distribution of distances shows that most of the points that were off were less than 500 ft. For now, I am just going to mark those stops with more than 10 ft of movement. If I find crashes close to those marked stops. I will look further into it. 
+
+I want to export a list of all the stops. Then upload it to ArcGIS to find which stops the crashes happened at. 
+
+```{r}
+
+combined_stops_df <- combined_stops |>
+  mutate(moved_10_ft = ifelse(hypot > 10, TRUE, FALSE)) |>
+  st_as_sf(coords = c("x_avg", "y_avg"), crs = 2264) |>
+  st_transform(4326)
+
+ggplot(combined_stops_df) +
+  annotation_map_tile() +
+  geom_sf(aes(color = moved_10_ft))
+
+# st_write(combined_stops_df, "../1_data/HSIS Charlotte Data/combined_data/busstops.geojson", append = FALSE)
+
+```
+
+
+
+## Exploring inside the different data sets
+
+I want to get a df with just the variables that my data has and their descriptions. Here it is. 
+
+```{r}
+data_documentation <- read_csv("../1_data/data_documentation.csv")
+
+my_cols <- data.frame(VARIABLENAME = c(names(busstop_data),
+                                       names(crash_data),
+                                       names(person_data),
+                                       names(unit_data)),
+                      DATAFILE = c(rep("BusStop", length(names(busstop_data))),
+                                   rep("Crash", length(names(crash_data))),
+                                   rep("Person", length(names(person_data))),
+                                   rep("Unit", length(names(unit_data)))
+                                   ),
+                      ACCESSIBLE = 1)
+
+my_col_defs <- full_join(data_documentation, my_cols, by = c("VARIABLENAME","DATAFILE")) |>
+  filter(!is.na(ACCESSIBLE)) |>
+  filter(VARIABLENAME != "orgnl_file") |>
+  select(VARIABLENAME, DATAFILE, Description = VARIABLEDESCRIPTION)
+
+gt(my_col_defs, 
+   groupname_col = "DATAFILE",
+   rowname_col = "VARIABLENAME",
+   row_group_as_column = T)
+```
+
+
+What does the crash data look like?
+```{r}
+crash_sf <- st_as_sf(crash_data,coords = c("LONGITUDE","LATITUDE"),  crs = 4326)
+
+crash_sf |>
+  ggplot() + 
+  annotation_map_tile() +
+  geom_sf()
+```
+
+It looks like there are some data points that might not be part of the study area. But I don't think this will be a problem once we filter it to just the bus stop crashes.
+
+I'm trying to find out which variables mention anything about buses. I will search through each variable, and look into the ones that mention buses somewhere. 
+
+```{r}
+crash_types <- unique(crash_data$CRASH_TYPE)
+crash_cause <- unique(crash_data$PRIMARY)
+ped_contributing_action <- person_data$HZRD_ACTN |> unique()
+ped_party <- person_data$PRTY_TYPE_DESC |> unique()
+
+crash_cause[grepl("bus",crash_cause)]
+
+search_variables <- function(dfs, string){
+  cols <- c()
+  values <- c()
+  for (col in names(dfs)){
+    var <- dfs[[col]]
+    if (TRUE %in% grepl(string,var)){
+      value <- var[grepl(string,var)]
+      for (val in value){
+        values <- c(values, val)
+        cols <- c(cols, col)
+      }
+      
+    }
+    
+  }
+
+  return(data.frame(Variable = cols, Value = values))
+}
+
+bus_mention <- search_variables(dfs = c(busstop_data,
+                                        crash_data,
+                                        person_data,
+                                        unit_data),
+                                string = "bus")
+
+commercial_mention <- search_variables(dfs = c(busstop_data,
+                                        crash_data,
+                                        person_data,
+                                        unit_data),
+                                string = "commercial")
+
+transit_mention <- search_variables(dfs = c(busstop_data,
+                                        crash_data,
+                                        person_data,
+                                        unit_data),
+                                string = "transit ")
+
+public_mention <- search_variables(dfs = c(busstop_data,
+                                        crash_data,
+                                        person_data,
+                                        unit_data),
+                                string = "public")
+
+# bus_mention |>
+#   filter(!Variable %in% c("NARRATIVE"))
+# 
+# commercial_mention |>
+#   filter(Variable != "NARRATIVE")
+
+  
+```
+
+It looks like there is mention of a VEHC_TYPE = "Commercial bus" in unit data.
+
+I thin this is what I will want to focus on. 
+
+
+```{r}
+bus_unit <- unit_data[unit_data$VEHC_TYPE == "Commercial bus",] |>
+  left_join(crash_sf, by = "CRSH_ID") |>
+  st_as_sf() |>
+  filter(!st_is_empty(geometry))
+
+bus_unit |>
+  ggplot() + 
+  annotation_map_tile() +
+  geom_sf()
+
+person_data |>
+  filter(INJY_SVTY == "Killed")
+
+```
+
+
+```{r}
+
+```
+
 

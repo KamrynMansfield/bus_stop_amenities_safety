@@ -1,5 +1,5 @@
 ---
-title: My Research Project
+title: HW3 - Descriptive Stratistics and Data Visualiztions
 author:
   - name: Kamryn Mansfield
     orcid: 0000-0002-0760-5497
@@ -35,6 +35,56 @@ citation:
   container-title: Transportation Engineering
 number-sections: true
 ---
+
+```{r}
+library(tidyverse)
+library(sf)
+library(ggspatial)
+```
+
+
+## 1. Dependent Variable Selection (10)
+
+**Dependendt Variable:** Pedestrian crash probability at bus stops. 
+
+## 2. Independent Variable Selection (10)
+
+The following variables are available for the bus stops in Charlotte and will be used as independent variables in the analysis.
+
+- Does the bus stop have a bench?
+
+- Does the bus stop have a shelter?
+
+- Does the bus stop have a sidewalk?
+
+- How many routes pass the bus stop?
+
+- Is the bus stop a transfer point?
+
+- Is the buss stop for inbound or outbound buses?
+
+I am particularly interested in seeing if the sidewalk presence or the number of routes crossing have an effect on pedestrian crash probability. 
+
+Some other variables that I don't have direct access to but can probably finde are given below. I may decide to look at some of these 
+
+- Land use
+
+- Population density around bus stops
+
+
+## 3. Descriptive Statistics (40)
+
+
+
+
+## 4. Data visualization (10)
+
+## 5. Conceptual Framework / Hypotheses (10)
+
+## 6. Write-up and Interpretation (20)
+
+
+
 
 ## Introduction {#sec-intro}
 

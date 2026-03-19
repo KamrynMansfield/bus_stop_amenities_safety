@@ -1,0 +1,75 @@
+---
+title: "Organizing  Non-Motorist Crash"
+author: Kamryn Mansfield
+---
+
+In the NCDOT Non-Motorist Crash Map, they have a crash type that is commercial bus related. This data is publicly available to [view online](https://www.arcgis.com/apps/mapviewer/index.html?webmap=b4fcdc266d054a1ca075b60715f88aef).
+
+I was able to filter to just the commercial bus related crashes. I copied all of the data for each of the points on the map, and then I copied the points to a geojson file. Now I will need to combine those. 
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(sf)
+library(leaflet)
+```
+
+## Pulling in files (excel file with data, geojson file with points)
+
+```{r}
+ped_bus_crash_data <- read_excel("../1_data/NCDOT bus related crashes/manual_crash_creation.xlsx")
+
+ped_bus_crash_points <- st_read("../1_data/NCDOT bus related crashes/non_motorist_crashes_in_charlotte.geojson")
+```
+
+## Combining the data
+
+```{r}
+ped_bus_crashes <- ped_bus_crash_points |>
+  
+  # For some reasons, the points duplicated when I exported them. Here I get rid of the duplicate points. 
+  mutate(is_duplicate = duplicated(title)) |>
+  filter(is_duplicate == FALSE) |>
+  
+  # select just the necessary columns
+  select(CrashID = title, geometry) |>
+  
+  # make CrashID a number instead of a character
+  mutate(CrashID = as.numeric(CrashID)) |>
+  
+  # join to the excel data
+  left_join(ped_bus_crash_data, by = "CrashID")
+
+```
+
+
+## Exporting the combined data
+
+```{r}
+# st_write(ped_bus_crashes, "../1_data/NCDOT bus related crashes/ped_bus_crashes.geojson")
+```
+
+## Viewing combined data
+
+```{r}
+
+ped_bus_crashes |>
+  leaflet() |>
+  addTiles() |>
+  addCircleMarkers(radius = 5,
+                   popup = ~paste0(
+      "<b>CrashID: </b>", CrashID, "<br>",
+      "<b>Date: </b>", CrashDate, "<br>",
+      "<b>Injury (Driver): </b>", DrvrInjury, "<br>",
+      "<b>Injury (Ped): </b>", NM_Inj, "<br>",
+      "<b>Sex (Driver): </b>", DrvrSex, "<br>",
+      "<b>Sex (Ped): </b>", NM_Sex, "<br>",
+      "<b>Race (Driver): </b>", DrvrRace, "<br>",
+      "<b>Race (Ped): </b>", NM_Race, "<br>",
+      "<b>Age (Driver): </b>", DrvrAge, "<br>",
+      "<b>Age (Ped): </b>", NM_Age, "<br>",
+      "<b>Aclohol (Driver): </b>", DrvrAlcDrg, "<br>",
+      "<b>Aclohol (Ped): </b>", NM_AlcDrg
+    ))
+```
+

@@ -1,0 +1,220 @@
+---
+title: "Data Preparation"
+author: Kamryn Mansfield
+---
+
+### Load Libraries
+```{r}
+library(tidyverse)
+library(sf)
+library(ggspatial)
+library(gt)
+library(leaflet)
+```
+
+
+## Pull in and clean data
+
+```{r}
+combined_hsis_folder <- "../1_data/HSIS Charlotte Data/combined_data/"
+
+busstop_data <- read_csv(paste0(combined_hsis_folder, "/","combined_18_to_24_catsStops.csv"))
+busstop_data <- busstop_data[,2:ncol(busstop_data)]
+
+crash_data <- read_csv(paste0(combined_hsis_folder, "/","combined_18_to_24_crash.csv"))
+crash_data <- crash_data[,2:ncol(crash_data)]
+
+person_data <- read_csv(paste0(combined_hsis_folder, "/","combined_18_to_24_per.csv"))
+person_data <- person_data[,2:ncol(person_data)]
+
+unit_data <- read_csv(paste0(combined_hsis_folder, "/","combined_18_to_24_unit.csv"))
+unit_data <- unit_data[,2:ncol(unit_data)]
+
+```
+
+## Combining Data
+I noticed that some files have an extra digit at the end, so I selected all the files with common lat lon formats and made two plots. 
+
+small: These datasets have 5 or 6 digits in the coordinates and seem to just be missing a zero at the end. 
+```{r}
+small_coords_stops <- busstop_data |>
+  filter(orgnl_file %in% c("clt18catsStops.csv",
+                           "clt19catsStops.csv",
+                           "clt20catsStops.csv",
+                           "clt22catsStops.csv")) |>
+  mutate(X = X*10, Y = Y*10)
+
+```
+
+big: These datasets have 6 or 7 digits in the coordinates
+```{r}
+big_coords_stops <- busstop_data |>
+  filter(orgnl_file %in% c("clt23catsStops.csv",
+                           "clt24catsStops.csv",
+                           "clt21catsStops.csv"))
+```
+
+this df has combined the data after adjusting the coordinates
+```{r}
+uniform_coords_df <- bind_rows(small_coords_stops, big_coords_stops)
+
+# ggplot(uniform_coords_df) +
+#   geom_point(aes(x = X, y = Y))
+
+```
+
+While the documentation just identifies x and y as latitude and longitude, an AI search helped me find that they are specifically from the North Carolina State Plane Coordinate System, EPSG:2264
+```{r}
+# 1. Turn coordinates into sf object (North Carolina State Plane Coordinate System, EPSG:2264)
+busstops_sf <- st_as_sf(uniform_coords_df, coords = c("X", "Y"), crs = 2264)
+# 2. Transform to Lat/Long (WGS84, EPSG:4326)
+busstops_sf <- st_transform(busstops_sf, 4326)
+
+```
+
+
+Now I will read in the pedestrian bus-related crashes that I already organized
+```{r}
+pb_crashes_sf <- st_read("../1_data/NCDOT bus related crashes/ped_bus_crashes.geojson")
+```
+
+A quick view of the pb_crashed over the bus stop data. There are some that don't look like they are very close to bus stops. 
+```{r}
+ggplot(busstops_sf) +
+  annotation_map_tile() +
+  geom_sf(color = "black") +
+  geom_sf(data = pb_crashes_sf, color = "red")
+```
+
+I'm just looking at the different variables connected to the bus stops that I can use in my analysis. 
+```{r}
+lapply(busstop_data, unique)
+```
+
+Adding variable to busstop data: ROUTES_PASSING
+```{r}
+busstops_sf <- busstops_sf |>
+  mutate(ROUTES_PASSING = sapply(strsplit(ROUTES,","), length))
+```
+
+Getting the year for each stop
+```{r}
+busstops_sf <- busstops_sf |>
+  mutate(YEAR = case_when(
+    orgnl_file == "clt18catsStops.csv" ~ 2018,
+    orgnl_file == "clt19catsStops.csv" ~ 2019,
+    orgnl_file == "clt20catsStops.csv" ~ 2020,
+    orgnl_file == "clt21catsStops.csv" ~ 2021,
+    orgnl_file == "clt22catsStops.csv" ~ 2022,
+    orgnl_file == "clt23catsStops.csv" ~ 2023,
+    orgnl_file == "clt24catsStops.csv" ~ 2024
+  )) |>
+  select(!orgnl_file)
+```
+
+Finding the closest bus stop to the crash
+```{r}
+
+pb_crashes_sf$year <- pb_crashes_sf$CrashDate |> year()
+
+pb_crashes_sf <- pb_crashes_sf |>
+  mutate(busstop_year = case_when(
+    year < 2018 ~ 2018,
+    TRUE ~ year
+  ))
+
+# make a unique id for each bus stop and year
+busstops_sf <- busstops_sf |>
+  mutate(ID = as.numeric(paste0(STOPID, YEAR)))
+
+# I found some duplicate rows that I can delete
+busstops_sf |>
+  filter(ID %in% c(607102023,607102024)) |> 
+  View()
+
+# filtering out duplicate rows
+busstops_sf <- busstops_sf |>
+  mutate(is_duplicate = duplicated(ID)) |>
+  filter(is_duplicate == FALSE)
+
+# making sure all IDs are unique
+length(unique(busstops_sf$ID)) == nrow(busstops_sf)
+
+matching_stops <- c()
+crash_data_list <- list()
+for (year_num in unique(busstops_sf$YEAR)){
+  new_crash_sf <- pb_crashes_sf |>
+  filter(busstop_year == year_num)
+  
+  new_stop_sf <- busstops_sf |>
+  filter(YEAR == year_num)
+  
+  idx <- st_nearest_feature(new_crash_sf, new_stop_sf)
+  
+  matching_stops <- c(matching_stops,new_stop_sf$ID[idx])
+
+  crash_data_list[[as.character(year_num)]] <- new_crash_sf
+}
+
+#delete after
+# new_stop_sf |>
+#   filter(stop_idx)
+#   ggplot() +
+#   geom_sf(color = "blue") +
+#   geom_sf(data = new_crash_sf, color = "red")
+
+pb_crashes_sf <- bind_rows(crash_data_list)
+pb_crashes_sf$ID <- matching_stops
+
+length(unique(pb_crashes_sf$ID)) == nrow(pb_crashes_sf)
+
+```
+
+Now that I know the closest stop id of each crash, I want to find the distance from the stop and I want to view the crashes and bus stops on a map. 
+```{r}
+busstops_crashes <- busstops_sf[match(pb_crashes_sf$ID, busstops_sf$ID),]
+
+distances <- st_distance(pb_crashes_sf, busstops_crashes, by_element = TRUE)
+
+pb_crashes_sf$dist_from_stop <- as.numeric(distances)
+
+busstops_small <- busstops_crashes |>
+  select(ID) |>
+  mutate(category = "stop")
+
+combined_to_plot <- pb_crashes_sf |>
+  select(ID) |>
+  mutate(category = "crash") |>
+  bind_rows(busstops_small)
+
+
+# 1. Define a palette for True/False values
+# You can use hex codes or standard color names like "green" and "red"
+pal <- colorFactor(palette = c("skyblue3", "red"), domain = c("stop", "crash"))
+
+leaflet(combined_to_plot) %>%
+  addTiles() %>%
+  addCircleMarkers(
+    # 2. Color points by the boolean column using the palette
+    color = ~pal(category),
+    # 3. Add a popup label (shows on click)
+    popup = ~ID,
+    # Optional: add a label (shows on hover)
+    label = ~ID,
+    fillOpacity = 0.7,
+    radius = 4
+  )
+
+```
+
+I want to add the crash data to the bus data frame, and then save it as a geojson file to use more easily in the main analysis.
+```{r}
+pb_no_geom <- st_drop_geometry(pb_crashes_sf)
+
+combined_stops_crashes <- left_join(busstops_sf, pb_no_geom, by = "ID")
+combined_stops_crashes$crash_year <- combined_stops_crashes$year
+combined_stops_crashes$year <- NULL
+
+st_write(combined_stops_crashes, "../1_data/NCDOT bus related crashes/combined_stops_crashes.geojson")
+
+```
